@@ -1,10 +1,10 @@
-using Microsoft.VisualBasic;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.IO;
+
 
 namespace VisualCleaner
 {
@@ -50,6 +50,9 @@ namespace VisualCleaner
         private readonly int autoDisableMinutes = 10;
 
         // User Interface
+        private Icon iconOn;
+        private Icon iconOff;
+        private Icon iconIdle;
         private readonly NotifyIcon trayIcon;
         private readonly System.Windows.Forms.Timer timer;
         private readonly ContextMenuStrip menu;
@@ -62,6 +65,10 @@ namespace VisualCleaner
             proc = HookCallback;
             hookId = SetHook(proc);
 
+            iconOff = LoadIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "cleaningDisabled.ico"));
+            iconOn = LoadIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "cleaningEnabled.ico"));
+            iconIdle = LoadIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "broom.ico"));
+
             menu = new ContextMenuStrip();
             toggleItem = new ToolStripMenuItem("Enable Cleaning Mode", null, OnToggleClick);
             aboutItem = new ToolStripMenuItem("About", null, OnAboutClick);
@@ -71,7 +78,7 @@ namespace VisualCleaner
 
             trayIcon = new NotifyIcon
             {
-                Icon = System.Drawing.SystemIcons.Shield,
+                Icon = iconOff,
                 ContextMenuStrip = menu,
                 Visible = true,
                 Text = "VisualCleaner - Cleaning Mode: Off"
@@ -86,16 +93,20 @@ namespace VisualCleaner
             ShowBalloon("Keyboard Cleaning Mode ready", "Toggle with Ctrl + Alt + F12");
         }
 
+        //TODO: Fix balloon tip showing the wrong icon on the top right corner
         private void ShowBalloon(string title, string text)
         {
             trayIcon.BalloonTipTitle = title;
             trayIcon.BalloonTipText = text;
+            trayIcon.BalloonTipIcon = ToolTipIcon.Info;
+            trayIcon.Icon = iconIdle;
             trayIcon.ShowBalloonTip(3000);
         }
 
         private void OnAboutClick(object? sender, EventArgs e)
         {
             MessageBox.Show(
+            "VisualCleaner v1.0 made by Miracle Aigbogun\n\n" +
             "Keyboard Cleaning Mode\n\n" +
             "• Toggle: Ctrl + Alt + F12\n" +
             "• Blocks all keyboard keys while ON (mouse still works)\n" +
@@ -128,7 +139,7 @@ namespace VisualCleaner
             {
                 cleaningStartedUtc = DateTime.UtcNow;
                 toggleItem.Text = "Disable Cleaning Mode";
-                trayIcon.Icon = System.Drawing.SystemIcons.Warning;
+                trayIcon.Icon = iconOn;
                 trayIcon.Text = TooltipText();
                 ShowBalloon("Cleaning Mode ON", "All keyboard input is BLOCKED. Toggle off to restore.");
             }
@@ -136,9 +147,27 @@ namespace VisualCleaner
             {
                 toggleItem.Text = "Enable Cleaning Mode";
                 trayIcon.Text = "VisualCleaner - Cleaning Mode: Off";
-                trayIcon.Icon = System.Drawing.SystemIcons.Shield;
+                trayIcon.Icon = iconOff;
                 ShowBalloon("Cleaning Mode Disabled", "Keyboard input restored.");
             }
+        }
+
+        private Icon? LoadIcon(string path)
+        {
+            try
+            {
+                if(File.Exists(path))
+                {
+                    return new Icon(path);
+                }
+                else
+                {
+                    MessageBox.Show($"Icon file not found: {path}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return System.Drawing.SystemIcons.Application;
+                }
+            } catch { }
+
+            return null;
         }
 
         private string TooltipText()
@@ -152,7 +181,7 @@ namespace VisualCleaner
             {
                 ToggleCleaningMode();
                 toggleItem.Text = "Enable Cleaning Mode";
-                trayIcon.Icon = System.Drawing.SystemIcons.Shield;
+                trayIcon.Icon = iconIdle;
                 trayIcon.Text = TooltipText();
                 ShowBalloon("Auto-disabled", "Cleaning mode turned OFF (failsafe)");
             }

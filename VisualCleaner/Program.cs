@@ -6,6 +6,9 @@ using System.Windows.Forms;
 using System.IO;
 
 
+//TODO: Add process kill when trying to run the same process again 
+//TODO: Do not let the user end the process while cleaning mode is on 
+
 namespace VisualCleaner
 {
     internal static class Program
